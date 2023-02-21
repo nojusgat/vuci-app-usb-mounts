@@ -92,13 +92,6 @@ export default {
     }
   },
   methods: {
-    resetData () {
-      this.loading = true
-      this.data = []
-      this.path = '/'
-      this.downloadPath = ''
-      this.downloadFilename = ''
-    },
     getFiles () {
       this.$rpc
         .call('mounts', 'files', { device: this.device, path: this.path })
@@ -264,7 +257,8 @@ export default {
   watch: {
     visible (newValue) {
       if (newValue !== true) return
-      this.resetData()
+      if (this.data.length > 0) return
+      this.loading = true
       this.getFiles()
     },
     path () {
@@ -274,6 +268,10 @@ export default {
       if (newArray.some(data => data.mountpoint === this.mountpoint)) return
       this.$emit('cancel')
     }
+  },
+  created () {
+    if (this.mountpoint === null) return
+    this.getFiles()
   }
 }
 </script>

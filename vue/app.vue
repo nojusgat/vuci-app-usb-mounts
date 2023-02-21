@@ -20,7 +20,7 @@
         </a-space>
       </div>
     </a-table>
-    <browser-modal v-bind="browse" :devices="devices" @cancel="browse.visible = false" />
+    <browser-modal :key="browse.mountpoint" v-bind="browse" :devices="devices" @cancel="browse.visible = false" />
   </div>
 </template>
 
