@@ -6,7 +6,17 @@
     :footer="false"
   >
     <a-table :columns="columns" :data-source="data" :loading="loading" :showHeader="false">
-      <div slot="name" slot-scope="file" @click="changePath(file)" :class="[file.type]" >
+      <div
+        slot="name"
+        slot-scope="file"
+        @click="changePath(file)"
+        :class="[{ 'drop': dragged === file.name }, file.type]"
+        @dragover.prevent="onEnterDrag(file)"
+        @dragenter.prevent="onEnterDrag(file)"
+        @dragleave.prevent="onLeaveDrag"
+        @dragend.prevent="onLeaveDrag"
+        @drop.prevent="onDrop($event, file)"
+      >
         <div class="item">
           <a-icon :type="getIcon(file)" style="font-size: 30px" />
           <span>{{ file.name }}</span>
@@ -31,7 +41,7 @@
       <a-button icon="folder" @click="createDirectory">
         Create directory
       </a-button>
-      <upload-button :path="mountpoint + path" :files="data" @refresh="getFiles" />
+      <upload-button ref="upload" :mountpoint="mountpoint" :path="path" :files="data" @refresh="getFiles" @status="changeUploadStatus" />
     </a-space>
     <form ref="download" method="POST" action="/download">
       <input v-show="false" type="text" :value="downloadPath" name="path"/>
@@ -58,7 +68,9 @@ export default {
       loading: true,
       path: '/',
       downloadPath: '',
-      downloadFilename: ''
+      downloadFilename: '',
+      dragged: '',
+      uploadStatus: ''
     }
   },
   props: {
@@ -111,6 +123,7 @@ export default {
     },
     getIcon (file) {
       if (file.name === '..') return 'rollback'
+      if (file.type === 'directory' && file.name === this.dragged) return 'folder-open'
       if (file.type === 'directory') return 'folder'
       return 'file'
     },
@@ -207,6 +220,40 @@ export default {
             })
         }
       })
+    },
+    onDrop (event, file) {
+      this.dragged = ''
+
+      const files = event.dataTransfer.files
+      if (files.length === 0) return
+      if (files.length > 1) return this.$message.error('You can not upload more than one file')
+      if (this.uploadStatus === 'uploading') return this.$message.error('Please wait until upload is finished')
+
+      this.isFile(files[0]).then(isFile => {
+        if (!isFile) return this.$message.error('You can only upload files')
+        this.$refs.upload.onFileDrop(event, file.path)
+      })
+    },
+    onEnterDrag (file) {
+      this.dragged = file.name
+    },
+    onLeaveDrag () {
+      this.dragged = ''
+    },
+    isFile (file) {
+      return new Promise(resolve => {
+        var fr = new FileReader()
+        fr.onload = () => {
+          resolve(true)
+        }
+        fr.onerror = () => {
+          resolve(false)
+        }
+        fr.readAsText(file)
+      })
+    },
+    changeUploadStatus (status) {
+      this.uploadStatus = status
     }
   },
   computed: {
@@ -215,18 +262,15 @@ export default {
     }
   },
   watch: {
-    visible (newValue, oldValue) {
-      if (newValue === oldValue) return
+    visible (newValue) {
       if (newValue !== true) return
       this.resetData()
       this.getFiles()
     },
-    path (newValue, oldValue) {
-      if (newValue === oldValue) return
+    path () {
       this.getFiles()
     },
-    devices (newArray, oldArray) {
-      if (newArray === oldArray) return
+    devices (newArray) {
       if (newArray.some(data => data.mountpoint === this.mountpoint)) return
       this.$emit('cancel')
     }
@@ -248,6 +292,20 @@ export default {
   flex-direction: row;
   align-items: center;
   gap: 10px;
+}
+
+.directory.drop {
+  background-color: #f9f9f9;
+  border: #dddddd 2px dashed;
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.file.drop {
+  background-color: #f9f9f9;
+  border: #f9f9f9 2px solid;
+  border-radius: 10px;
+  padding: 5px;
 }
 
 .action {

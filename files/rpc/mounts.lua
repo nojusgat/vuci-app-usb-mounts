@@ -6,7 +6,7 @@ local M = {}
 local function get_used_size(mountpoint, size)
     for file in lfs.dir(mountpoint) do
         local file_path = mountpoint .. "/" .. file
-        if file:sub(1, 1) ~= "." then
+        if string.sub(file, 1, 1) ~= "." then
             local attributes = lfs.attributes(file_path)
             if attributes.mode == "directory" then
                 size = get_used_size(file_path, size)
@@ -36,16 +36,16 @@ local function get_mounts(mountpoint)
         return mounts
     end
 
-    for device, mount, type in stdout:gmatch("(%S+) on (%S+) type (%S+)%C*%c") do
-        if mount ~= nil and mount:find(mountpoint) then
+    for device, mount, type in string.gmatch(stdout, "(%S+) on (%S+) type (%S+)%C*%c") do
+        if device ~= nil and mount ~= nil and type ~= nil and string.find(mount, mountpoint) then
             mounts[device] = { mount = mount, type = type }
         end
     end
     return mounts
 end
 
-local function get_mount_information(device, mountpoint)
-    local mounts = get_mounts(mountpoint)
+local function get_mount_information(device)
+    local mounts = get_mounts("/mnt/")
     return mounts[device]
 end
 
@@ -59,7 +59,7 @@ end
 local function force_remove_directory(directory)
     for file in lfs.dir(directory) do
         local file_path = directory .. "/" .. file
-        if file:sub(1, 1) ~= "." then
+        if string.sub(file, 1, 1) ~= "." then
             if lfs.attributes(file_path, "mode") == "directory" then
                 force_remove_directory(file_path)
             else
@@ -111,7 +111,7 @@ end
 -- params = { device: '/dev/sda1', path: '/' }
 function M.files(params)
     local files = {}
-    local mount_information = get_mount_information(params.device, "/mnt/")
+    local mount_information = get_mount_information(params.device)
 
     if mount_information == nil then
         return files
@@ -119,7 +119,7 @@ function M.files(params)
 
     local path = mount_information.mount .. params.path
     for name in lfs.dir(path) do
-        if name:sub(1, 1) ~= "." then
+        if string.sub(name, 1, 1) ~= "." then
             local attributes = lfs.attributes(path .. "/" .. name)
             local file_path = params.path
             if attributes.mode == 'directory' then
@@ -139,7 +139,7 @@ end
 
 -- params = { device: '/dev/sda1', path: '/', name: 'new_dir', type: 'directory' }
 function M.create(params)
-    local mount_information = get_mount_information(params.device, "/mnt/")
+    local mount_information = get_mount_information(params.device)
 
     if mount_information == nil then
         return { success = false }
@@ -154,7 +154,7 @@ end
 
 -- params = { device: '/dev/sda1', path: '/', name: 'file_name' }
 function M.delete(params)
-    local mount_information = get_mount_information(params.device, "/mnt/")
+    local mount_information = get_mount_information(params.device)
 
     if mount_information == nil then
         return { success = false }
