@@ -29,3 +29,11 @@
 ![](/images/unmount.png)
 
 ![](/images/unmounted.png)
+
+![](/images/drag-drop-folder.png)
+
+![](/images/drag-drop-folder-uploaded.png)
+
+![](/images/drag-drop.png)
+
+![](/images/drag-drop-uploaded.png)
